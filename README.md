@@ -43,10 +43,8 @@ A mobile app developed in **React Native with Expo** to convert amounts between 
 
 ## 📷 Screenshots
 
-> *(Add your images here, for example with Markdown)*
-```md
-
-```
+| ![image1](https://github.com/user-attachments/assets/aa056ef0-7021-40ad-a21c-15de93140f1e) | ![image2](https://github.com/user-attachments/assets/c715feef-9727-4ee2-9569-d841908dedd6) |
+|:--:|:--:|
 
 ---
 
@@ -62,6 +60,6 @@ A mobile app developed in **React Native with Expo** to convert amounts between 
 ## 👨‍💻 Developed by
 
 Miguel Farfan
-Computer Science Engineer | Frontend & Mobile Developer
-📧 mfpersonal777@gmail.com
-🌐 [GitHub](https://github.com/MichaelX17)
+- Computer Science Engineer | Frontend & Mobile Developer
+- 📧 mfpersonal777@gmail.com
+- 🌐 [GitHub](https://github.com/MichaelX17)
