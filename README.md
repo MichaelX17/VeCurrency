@@ -1,4 +1,4 @@
-# 💱 Dollar Bolivar App
+# 💱 VeCurrency App
 
 A mobile app developed in **React Native with Expo** to convert amounts between **dollars (USD)** and **bolivars (VES)**, using both the **official BCV rate** and the **parallel rate**. It offers a fast, clear experience adapted to Venezuela's economic situation.
 
