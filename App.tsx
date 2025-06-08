@@ -10,14 +10,18 @@ import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as Network from 'expo-network';
 
-type RateType = 'bcv' | 'paralelo' | 'average';
+type RateType = 'bcv' | 'digital' | 'euro';
 
 const VeCurrency = () => {
   // Estados principales
   const [isDollarToBs, setIsDollarToBs] = useState(true);
   const [type, setType] = useState<RateType>('bcv');
   const [input, setInput] = useState('');
-  const [rates, setRates] = useState({ bcv: 0, paralelo: 0 });
+  const [rates, setRates] = useState({
+    bcv: 0,
+    digital: 0,
+    euro: 0 
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -45,6 +49,19 @@ const VeCurrency = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const fetchWithTimeout = async (url: string, options: any = {}, timeout = 5000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+
+    clearTimeout(id);
+    return response;
+  };
+
   // Configuración de la barra de navegación (Android)
   useEffect(() => {
     const configureAndroidNavigation = async () => {
@@ -64,7 +81,37 @@ const VeCurrency = () => {
     configureAndroidNavigation();
   }, []);
 
-  // Obtener tasas de cambio
+  // Función para obtener el precio de Binance
+  const fetchBinancePrice = async () => {
+    const response = await fetch('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "page": 1,
+        "rows": 1,
+        "payTypes": [],
+        "asset": "USDT",
+        "tradeType": "SELL",
+        "fiat": "VES",
+        "transAmount": ""
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al obtener precio de Binance');
+    }
+
+    const data = await response.json();
+    if (!data.success || !data.data?.[0]?.adv?.price) {
+      throw new Error('Datos de Binance no disponibles');
+    }
+
+    return parseFloat(data.data[0].adv.price);
+  };
+
+  // Obtener tasas de cambio (modificada)
   const fetchRates = useCallback(async () => {
     try {
       setIsRefreshing(true);
@@ -75,26 +122,25 @@ const VeCurrency = () => {
         throw new Error('No hay conexión a internet');
       }
 
-      const [resBCV, resParalelo] = await Promise.all([
+      // Hacer las peticiones
+      const [resBCV, binancePrice] = await Promise.all([
         fetch('https://pydolarve.org/api/v1/dollar?page=bcv'),
-        fetch('https://pydolarve.org/api/v2/dollar?monitor=enparalelovzla')
+        fetchBinancePrice()
       ]);
 
-      if (!resBCV.ok || !resParalelo.ok) {
-        throw new Error('Error en la respuesta del servidor');
+      if (!resBCV.ok) {
+        throw new Error('Error en la respuesta del servidor BCV');
       }
 
-      const [dataBCV, dataParalelo] = await Promise.all([
-        resBCV.json(),
-        resParalelo.json()
-      ]);
+      const dataBCV = await resBCV.json();
 
       setRates({
         bcv: dataBCV.monitors?.usd?.price || 0,
-        paralelo: dataParalelo?.price || 0
+        digital: binancePrice || 0,  // Precio de Binance
+        euro: dataBCV.monitors?.eur?.price || 0  // Precio del Euro desde BCV
       });
     } catch (error) {
-      // Verificar si es un Error
+      // Manejo de errores (igual que antes)
       if (error instanceof Error) {
         setErrorMessage(
           error.message.includes('internet')
@@ -104,7 +150,6 @@ const VeCurrency = () => {
       } else {
         setErrorMessage('Ocurrió un error desconocido');
       }
-
       setIsErrorModalVisible(true);
     } finally {
       setIsRefreshing(false);
@@ -140,7 +185,7 @@ const VeCurrency = () => {
     }
   }, [animateCopy]);
 
-  // Cálculo del resultado de conversión
+  // Cálculo del resultado de conversión (modificado para usar 'digital' y 'euro')
   const result = useMemo(() => {
     const value = parseFloat(input.replace(',', '.'));
     if (isNaN(value) || !input) return '';
@@ -148,8 +193,8 @@ const VeCurrency = () => {
     let rate = 0;
     switch (type) {
       case 'bcv': rate = rates.bcv; break;
-      case 'paralelo': rate = rates.paralelo; break;
-      case 'average': rate = (rates.bcv + rates.paralelo) / 2; break;
+      case 'digital': rate = rates.digital; break;
+      case 'euro': rate = rates.euro; break;
     }
 
     const resultValue = isDollarToBs ? value * rate : value / rate;
@@ -171,10 +216,11 @@ const VeCurrency = () => {
   // Handlers
   const handleSwap = () => setIsDollarToBs(prev => !prev);
 
+  // En el render, cambiar los textos para reflejar los nuevos tipos
   const handleTypeToggle = useCallback(() => {
     setType(prev => {
-      if (prev === 'bcv') return 'paralelo';
-      if (prev === 'paralelo') return 'average';
+      if (prev === 'bcv') return 'digital';
+      if (prev === 'digital') return 'euro';
       return 'bcv';
     });
   }, []);
@@ -200,11 +246,16 @@ const VeCurrency = () => {
     }
   }, []);
 
-  // Valores derivados
-  const rightLabel = isDollarToBs ? 'VES' : 'USD';
-  const placeholderText = isDollarToBs
-    ? 'Ingrese el monto en $'
-    : 'Ingrese el monto en Bs';
+  // Valores
+  const rightLabel =
+    (type === 'euro' && !isDollarToBs) ? 'EUR' :   // Cuando convertimos Bs → €
+      (type === 'euro' && isDollarToBs) ? 'VES' :    // Cuando convertimos € → Bs
+        isDollarToBs ? 'VES' : 'USD';                  // Casos normales ($ ↔ Bs)
+
+  const placeholderText =
+    isDollarToBs
+      ? (type === 'euro' ? 'Monto en €' : 'Monto en $')  // Cuando convertimos €/$ → Bs
+      : 'Monto en Bs';                                   // Cuando convertimos Bs → €/$
 
   // Componente para mostrar las tasas
   const RateBox = React.memo(({
@@ -268,14 +319,17 @@ const VeCurrency = () => {
           <RateBox
             icon={require('./assets/bcv-icon.png')}
             value={rates.bcv || '...'}
+            label="BCV"
           />
           <RateBox
-            icon={require('./assets/average.png')}
-            value={rates.bcv && rates.paralelo ? ((rates.bcv + rates.paralelo) / 2).toFixed(2) : '...'}
+            icon={require('./assets/euro.png')}  // Necesitarás un icono para el euro
+            value={rates.euro || '...'}
+            label="EURO"
           />
           <RateBox
-            icon={require('./assets/parallel-icon.png')}
-            value={rates.paralelo || '...'}
+            icon={require('./assets/dollar.png')}  // Necesitarás un icono para digital
+            value={rates.digital || '...'}
+            label="DIGITAL"
           />
         </View>
       </View>
@@ -286,7 +340,7 @@ const VeCurrency = () => {
           <>
             <TouchableOpacity style={styles.typeButton} onPress={handleTypeToggle}>
               <Text style={styles.typeButtonText}>
-                {type === 'bcv' ? 'BCV' : type === 'paralelo' ? 'PARA' : 'PROM'}
+                {type === 'bcv' ? 'BCV' : type === 'digital' ? 'DIGI' : 'EURO'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.swapBtn} onPress={handleSwap}>
@@ -301,8 +355,8 @@ const VeCurrency = () => {
               <Text style={styles.swapIcon}>⇆</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.typeButton} onPress={handleTypeToggle}>
-            <Text style={styles.typeButtonText}>
-                {type === 'bcv' ? 'BCV' : type === 'paralelo' ? 'PARA' : 'PROM'}
+              <Text style={styles.typeButtonText}>
+                {type === 'bcv' ? 'BCV' : type === 'digital' ? 'DIGI' : 'EURO'}
               </Text>
             </TouchableOpacity>
           </>
@@ -310,19 +364,21 @@ const VeCurrency = () => {
       </View>
 
       {/* Input */}
-      <View style={styles.inputWrapper}>
+      {/* Input */}
+      {/* Input */}
+      <View style={styles.inputContainer}>
         <TextInput
           placeholder={placeholderText}
           placeholderTextColor="#888"
           keyboardType="decimal-pad"
           value={input}
           onChangeText={handleInputChange}
-          onBlur={handleBlur}
-          style={styles.inputOverlay}
+          style={styles.input}
           textAlign='center'
+          cursorColor="#9b59b6"
         />
-        <Text style={[styles.inputDisplay, !input && styles.placeholder]}>
-          {input ? `${input} ${isDollarToBs ? '$' : 'Bs'}` : placeholderText}
+        <Text style={styles.currencySymbol}>
+          {!isDollarToBs ? 'Bs' : (type === 'euro' ? '€' : '$')}
         </Text>
       </View>
 
@@ -504,39 +560,32 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: '#fff',
   },
-  inputWrapper: {
+  inputContainer: {
     width: '80%',
-    height: 60,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: '#9b59b6',
     borderRadius: 10,
     backgroundColor: '#000',
     marginBottom: 20,
-    paddingHorizontal: 12,
-    alignItems: 'center',
+    paddingLeft: 20,
   },
-  inputOverlay: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    opacity: 0,
-    zIndex: 2,
-    color: 'transparent',
-    fontSize: 20,
-    textAlign: 'center',
-    includeFontPadding: false,
-    letterSpacing: 0.5,
-  },
-  inputDisplay: {
+  input: {
+    flex: 1,
+    height: 60,
     color: '#9b59b6',
     fontSize: 20,
     textAlign: 'center',
     includeFontPadding: false,
     letterSpacing: 0.5,
   },
-  placeholder: {
-    color: '#888',
+  currencySymbol: {
+    width: 40,
+    color: '#9b59b6',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   resultBoxContainer: {
     width: '80%',
