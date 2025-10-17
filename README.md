@@ -1,13 +1,13 @@
 # 💱 VeCurrency App
 
-A mobile app developed in **React Native with Expo** to convert amounts between **dollars (USD)**, **Euros (EUR)** and **bolivars (VES)**, using both the **official BCV rate** and the **digital rate**. It offers a fast, clear experience adapted to Venezuela's economic situation.
+A mobile app developed in **React Native with Expo** to convert amounts between **dollars (USD)**, **Digital Dolar (USDT)** and **bolivars (VES)**, using both the **official BCV rate** and the **digital rate**. It offers a fast, clear experience adapted to Venezuela's economic situation.
 
 ---
 
 ## 📲 Main Features
 
-- 🔄 **Real-time conversion** between USD, EUR and VES.
-- 📊 **Official rate both USD and EUR (BCV)** and **Digital USD rate** available.
+- 🔄 **Real-time conversion** between USD, USDT and VES.
+- 📊 **Official rate both USD (BCV)** and **Digital USD rate** available.
 - 🔁 **Dynamic exchange** between source and destination currencies.
 - 🧮 Automatic calculation while you type the amount.
 - 📋 **Copy result** with a visual animation upon tapping.
@@ -24,7 +24,7 @@ A mobile app developed in **React Native with Expo** to convert amounts between 
 4. Select your preferred rate:
 - 📘 **Official Rate (BCV)**
 - 🖤 **Digital Dollar Rate**
-- 📘 **Official Euro Rate (BCV)**
+- 📘 **USDT Rate (BNC)**
 5. Tap the result to **copy** it to the clipboard.
 6. The app displays the updated rates directly on the screen.
 
@@ -51,7 +51,6 @@ A mobile app developed in **React Native with Expo** to convert amounts between 
 ## 📌 Upcoming improvements (ALL)
 
 - ⏱️ Automatic rate updates every X minutes.
-- 🌙 Dark theme.
 - 📈 Rate history.
 - 🇻🇪 Support for other Latin American currencies.
 
