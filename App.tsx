@@ -10,18 +10,14 @@ import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as Network from 'expo-network';
 
-type RateType = 'bcv' | 'digital' | 'euro';
+type RateType = 'bcv' | 'digital' | 'average';
 
 const VeCurrency = () => {
   // Estados principales
   const [isDollarToBs, setIsDollarToBs] = useState(true);
   const [type, setType] = useState<RateType>('bcv');
   const [input, setInput] = useState('');
-  const [rates, setRates] = useState({
-    bcv: 0,
-    digital: 0,
-    euro: 0 
-  });
+  const [rates, setRates] = useState({ bcv: 0, digital: 0, average: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -45,19 +41,13 @@ const VeCurrency = () => {
 
     checkNetwork();
     const interval = setInterval(checkNetwork, 10000);
-
     return () => clearInterval(interval);
   }, []);
 
   const fetchWithTimeout = async (url: string, options: any = {}, timeout = 5000) => {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
-
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-
+    const response = await fetch(url, { ...options, signal: controller.signal });
     clearTimeout(id);
     return response;
   };
@@ -69,7 +59,7 @@ const VeCurrency = () => {
         try {
           await Promise.all([
             NavigationBar.setPositionAsync('absolute'),
-            NavigationBar.setBackgroundColorAsync('#000000'),
+            NavigationBar.setBackgroundColorAsync('#0d0f20'),
             NavigationBar.setButtonStyleAsync('light'),
             NavigationBar.setVisibilityAsync('visible')
           ]);
@@ -81,103 +71,66 @@ const VeCurrency = () => {
     configureAndroidNavigation();
   }, []);
 
-  // Función para obtener el precio de Binance
   const fetchBinancePrice = async () => {
     const response = await fetch('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        "page": 1,
-        "rows": 1,
-        "payTypes": [],
-        "asset": "USDT",
-        "tradeType": "SELL",
-        "fiat": "VES",
-        "transAmount": ""
+        page: 1,
+        rows: 1,
+        payTypes: [],
+        asset: 'USDT',
+        tradeType: 'SELL',
+        fiat: 'VES',
+        transAmount: ''
       })
     });
-
-    if (!response.ok) {
-      throw new Error('Error al obtener precio de Binance');
-    }
+    if (!response.ok) throw new Error('Error al obtener precio de Binance');
 
     const data = await response.json();
-    if (!data.success || !data.data?.[0]?.adv?.price) {
-      throw new Error('Datos de Binance no disponibles');
-    }
-
+    if (!data.success || !data.data?.[0]?.adv?.price) throw new Error('Datos de Binance no disponibles');
     return parseFloat(data.data[0].adv.price);
   };
 
-  // Obtener tasas de cambio (modificada)
+  // Obtener tasas de cambio
   const fetchRates = useCallback(async () => {
     try {
       setIsRefreshing(true);
-
-      // Verificar conexión antes de hacer la petición
       const networkState = await Network.getNetworkStateAsync();
-      if (!networkState.isConnected || !networkState.isInternetReachable) {
-        throw new Error('No hay conexión a internet');
-      }
+      if (!networkState.isConnected || !networkState.isInternetReachable) throw new Error('No hay conexión a internet');
 
-      // Hacer las peticiones
       const [resBCV, binancePrice] = await Promise.all([
-        fetch('https://pydolarve.org/api/v1/dollar?page=bcv'),
+        fetchWithTimeout('https://bcv-api.rafnixg.dev/rates/'),
         fetchBinancePrice()
       ]);
 
-      if (!resBCV.ok) {
-        throw new Error('Error en la respuesta del servidor BCV');
-      }
-
+      if (!resBCV.ok) throw new Error('Error en la respuesta del servidor BCV');
       const dataBCV = await resBCV.json();
+      const bcvRate = dataBCV.dollar;
+      const averageRate = (bcvRate + binancePrice) / 2;
 
-      setRates({
-        bcv: dataBCV.monitors?.usd?.price || 0,
-        digital: binancePrice || 0,  // Precio de Binance
-        euro: dataBCV.monitors?.eur?.price || 0  // Precio del Euro desde BCV
-      });
+      setRates({ bcv: bcvRate, digital: binancePrice, average: averageRate });
     } catch (error) {
-      // Manejo de errores (igual que antes)
-      if (error instanceof Error) {
-        setErrorMessage(
-          error.message.includes('internet')
-            ? 'No hay conexión a internet. Conéctese para obtener tasas actualizadas.'
-            : 'Los servidores no están respondiendo. Intente nuevamente más tarde.'
-        );
-      } else {
-        setErrorMessage('Ocurrió un error desconocido');
-      }
+      setErrorMessage(
+        error instanceof Error && error.message.includes('internet')
+          ? 'No hay conexión a internet. Conéctese para obtener tasas actualizadas.'
+          : 'Los servidores no están respondiendo. Intente nuevamente más tarde.'
+      );
       setIsErrorModalVisible(true);
     } finally {
       setIsRefreshing(false);
     }
   }, []);
 
-  // Cargar tasas al montar el componente
-  useEffect(() => {
-    fetchRates();
-  }, [fetchRates]);
+  useEffect(() => { fetchRates(); }, [fetchRates]);
 
-  // Animación para copiar al portapapeles
   const animateCopy = useCallback(() => {
     Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0.4,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      })
+      Animated.timing(fadeAnim, { toValue: 0.4, duration: 120, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true })
     ]).start();
   }, [fadeAnim]);
 
-  // Copiar al portapapeles
   const handleCopyToClipboard = useCallback(async (text: string) => {
     if (text) {
       await ClipboardAPI.setStringAsync(text);
@@ -185,94 +138,49 @@ const VeCurrency = () => {
     }
   }, [animateCopy]);
 
-  // Cálculo del resultado de conversión (modificado para usar 'digital' y 'euro')
   const result = useMemo(() => {
     const value = parseFloat(input.replace(',', '.'));
     if (isNaN(value) || !input) return '';
-
-    let rate = 0;
-    switch (type) {
-      case 'bcv': rate = rates.bcv; break;
-      case 'digital': rate = rates.digital; break;
-      case 'euro': rate = rates.euro; break;
-    }
-
+    const rate = type === 'bcv' ? rates.bcv : type === 'digital' ? rates.digital : rates.average;
     const resultValue = isDollarToBs ? value * rate : value / rate;
     return resultValue.toFixed(2);
   }, [input, isDollarToBs, type, rates]);
 
-  // Animación del resultado
   useEffect(() => {
     if (result) {
       fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     }
   }, [result, fadeAnim]);
 
-  // Handlers
   const handleSwap = () => setIsDollarToBs(prev => !prev);
-
-  // En el render, cambiar los textos para reflejar los nuevos tipos
   const handleTypeToggle = useCallback(() => {
-    setType(prev => {
-      if (prev === 'bcv') return 'digital';
-      if (prev === 'digital') return 'euro';
-      return 'bcv';
-    });
+    setType(prev => prev === 'bcv' ? 'digital' : prev === 'digital' ? 'average' : 'bcv');
   }, []);
-
   const handleInputChange = useCallback((text: string) => {
     const cleaned = text.replace(/[^0-9.]/g, '');
     const valid = cleaned.split('.').length <= 2 ? cleaned : input;
     setInput(valid);
   }, [input]);
-
   const handleBlur = useCallback(() => Keyboard.dismiss(), []);
 
   const openExternalLink = useCallback(async (url: string) => {
     try {
-      if (!/^https?:\/\//i.test(url)) {
-        url = `https://${url}`;
-      }
+      if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
       await Linking.openURL(url);
     } catch (error) {
-      console.error('Error al abrir el enlace:', error);
       setErrorMessage('No se pudo abrir el enlace');
       setIsErrorModalVisible(true);
     }
   }, []);
 
-  // Valores
-  const rightLabel =
-    (type === 'euro' && !isDollarToBs) ? 'EUR' :   // Cuando convertimos Bs → €
-      (type === 'euro' && isDollarToBs) ? 'VES' :    // Cuando convertimos € → Bs
-        isDollarToBs ? 'VES' : 'USD';                  // Casos normales ($ ↔ Bs)
+  const rightLabel = isDollarToBs ? 'VES' : 'USD';
+  const placeholderText = isDollarToBs ? 'Monto en $' : 'Monto en Bs';
 
-  const placeholderText =
-    isDollarToBs
-      ? (type === 'euro' ? 'Monto en €' : 'Monto en $')  // Cuando convertimos €/$ → Bs
-      : 'Monto en Bs';                                   // Cuando convertimos Bs → €/$
-
-  // Componente para mostrar las tasas
-  const RateBox = React.memo(({
-    icon,
-    value,
-    label
-  }: {
-    icon: any;
-    value: number | string;
-    label?: string
-  }) => (
-    <TouchableOpacity
-      style={styles.iconBox}
-      onPress={() => handleCopyToClipboard(String(value))}
-    >
+  const RateBox = React.memo(({ icon, value, label }: { icon: any; value: number | string; label?: string }) => (
+    <TouchableOpacity style={styles.iconBox} onPress={() => handleCopyToClipboard(String(value))}>
       <Image source={icon} style={styles.iconImage} resizeMode="contain" />
-      <Text style={styles.priceText}>{value}</Text>
+      <Text style={styles.priceText}>{value ? value.toLocaleString() : '...'}</Text>
       {label && <Text style={styles.priceLabel}>{label}</Text>}
     </TouchableOpacity>
   ));
@@ -283,65 +191,34 @@ const VeCurrency = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => openExternalLink('https://www.github.com/MichaelX17')}
-          activeOpacity={0.7}
-          style={styles.logoWrapper}
-        >
-          <Image
-            source={require('./assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+        <TouchableOpacity onPress={() => openExternalLink('https://www.github.com/MichaelX17')} activeOpacity={0.8} style={styles.logoWrapper}>
+          <Image source={require('./assets/in-app-icons/logo.png')} style={styles.logo} resizeMode="contain" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={fetchRates}
-          activeOpacity={0.7}
-          style={styles.logoWrapper}
-          disabled={isRefreshing}
-        >
+        <TouchableOpacity onPress={fetchRates} activeOpacity={0.8} style={styles.logoWrapper} disabled={isRefreshing}>
           {isRefreshing ? (
             <ActivityIndicator color="#9b59b6" size="small" />
           ) : (
-            <Image
-              source={require('./assets/refresh.png')}
-              style={[styles.refresh, { tintColor: '#9b59b6' }]}
-              resizeMode="contain"
-            />
+            <Image source={require('./assets/in-app-icons/refresh.png')} style={[styles.refresh, { tintColor: '#9b59b6' }]} resizeMode="contain" />
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Tasas de cambio */}
+      {/* Tasas */}
       <View style={styles.fastPrices}>
         <View style={styles.box}>
-          <RateBox
-            icon={require('./assets/bcv-icon.png')}
-            value={rates.bcv || '...'}
-            label="BCV"
-          />
-          <RateBox
-            icon={require('./assets/euro.png')}  // Necesitarás un icono para el euro
-            value={rates.euro || '...'}
-            label="EURO"
-          />
-          <RateBox
-            icon={require('./assets/dollar.png')}  // Necesitarás un icono para digital
-            value={rates.digital || '...'}
-            label="DIGITAL"
-          />
+          <RateBox icon={require('./assets/in-app-icons/bcv-icon.png')} value={rates.bcv || '...'} label="BCV" />
+          <RateBox icon={require('./assets/in-app-icons/average.png')} value={rates.average || '...'} label="PROMEDIO" />
+          <RateBox icon={require('./assets/in-app-icons/dollar.png')} value={rates.digital || '...'} label="DIGITAL" />
         </View>
       </View>
 
-      {/* Selector de tipo de cambio */}
+      {/* Selector */}
       <View style={styles.row}>
         {isDollarToBs ? (
           <>
             <TouchableOpacity style={styles.typeButton} onPress={handleTypeToggle}>
-              <Text style={styles.typeButtonText}>
-                {type === 'bcv' ? 'BCV' : type === 'digital' ? 'DIGI' : 'EURO'}
-              </Text>
+              <Text style={styles.typeButtonText}>{type === 'bcv' ? 'BCV' : type === 'digital' ? 'DIGITAL' : 'PROMEDIO'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.swapBtn} onPress={handleSwap}>
               <Text style={styles.swapIcon}>⇆</Text>
@@ -355,16 +232,12 @@ const VeCurrency = () => {
               <Text style={styles.swapIcon}>⇆</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.typeButton} onPress={handleTypeToggle}>
-              <Text style={styles.typeButtonText}>
-                {type === 'bcv' ? 'BCV' : type === 'digital' ? 'DIGI' : 'EURO'}
-              </Text>
+              <Text style={styles.typeButtonText}>{type === 'bcv' ? 'BCV' : type === 'digital' ? 'DIGITAL' : 'PROMEDIO'}</Text>
             </TouchableOpacity>
           </>
         )}
       </View>
 
-      {/* Input */}
-      {/* Input */}
       {/* Input */}
       <View style={styles.inputContainer}>
         <TextInput
@@ -376,70 +249,33 @@ const VeCurrency = () => {
           style={styles.input}
           textAlign='center'
           cursorColor="#9b59b6"
+          onBlur={handleBlur}
         />
-        <Text style={styles.currencySymbol}>
-          {!isDollarToBs ? 'Bs' : (type === 'euro' ? '€' : '$')}
-        </Text>
+        <Text style={styles.currencySymbol}>{isDollarToBs ? '$' : 'Bs'}</Text>
       </View>
 
       {/* Resultado */}
-      <TouchableOpacity
-        onPress={() => handleCopyToClipboard(result)}
-        activeOpacity={0.8}
-        style={styles.resultBoxContainer}
-        disabled={!result}
-      >
+      <TouchableOpacity onPress={() => handleCopyToClipboard(result)} activeOpacity={0.9} style={styles.resultBoxContainer} disabled={!result}>
         <Animated.View style={[styles.resultBox, { opacity: fadeAnim }]}>
-          <LinearGradient
-            colors={['#9b59b6', '#835cf9', '#5c64fa']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.resultBoxInner}
-          >
-            <Text style={styles.resultText}>
-              {result ? `${result} ${rightLabel}` : '---'}
-            </Text>
+          <LinearGradient colors={['#9b59b6', '#835cf9', '#5c64fa']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.resultBoxInner}>
+            <Text style={styles.resultText}>{result ? `${result} ${rightLabel}` : '---'}</Text>
             {result !== '' && <Text style={styles.copyNote}>Toca para copiar</Text>}
           </LinearGradient>
         </Animated.View>
       </TouchableOpacity>
 
-      {/* Modal de Error */}
-      <Modal
-        isVisible={isErrorModalVisible}
-        onBackdropPress={() => setIsErrorModalVisible(false)}
-        backdropColor="#000"
-        backdropOpacity={0.8}
-        animationIn="zoomIn"
-        animationOut="zoomOut"
-        animationInTiming={300}
-        animationOutTiming={300}
-        style={styles.modal}
-      >
+      {/* Modal */}
+      <Modal isVisible={isErrorModalVisible} onBackdropPress={() => setIsErrorModalVisible(false)} backdropColor="#000" backdropOpacity={0.7} animationIn="zoomIn" animationOut="zoomOut" animationInTiming={300} animationOutTiming={250} style={styles.modal}>
         <View style={styles.modalContent}>
-          <Image
-            source={require('./assets/logo.png')}
-            style={styles.modalIcon}
-            resizeMode="contain"
-          />
+          <Image source={require('./assets/in-app-icons/logo.png')} style={styles.modalIcon} resizeMode="contain" />
           <Text style={styles.modalTitle}>Error</Text>
           <Text style={styles.modalText}>{errorMessage}</Text>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.retryButton]}
-              onPress={() => {
-                setIsErrorModalVisible(false);
-                fetchRates();
-              }}
-            >
+            <TouchableOpacity style={[styles.modalButton, styles.retryButton]} onPress={() => { setIsErrorModalVisible(false); fetchRates(); }}>
               <Text style={styles.modalButtonText}>Reintentar</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.modalButton, styles.closeButton]}
-              onPress={() => setIsErrorModalVisible(false)}
-            >
+            <TouchableOpacity style={[styles.modalButton, styles.closeButton]} onPress={() => setIsErrorModalVisible(false)}>
               <Text style={styles.modalButtonText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
@@ -449,11 +285,10 @@ const VeCurrency = () => {
   );
 };
 
-// Estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0b0c1e',
+    backgroundColor: '#0d0f20',
     alignItems: 'center',
     paddingTop: 60,
     paddingHorizontal: 20,
@@ -462,123 +297,85 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 10,
+    marginBottom: 0,
   },
   logoWrapper: {
-    width: 50,
-    height: 50,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)'
   },
-  logo: {
-    width: 40,
-    height: 40,
-  },
-  refresh: {
-    width: 35,
-    height: 35,
-  },
-  fastPrices: {
-    width: '80%',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-  },
+  logo: { width: 40, height: 40 },
+  refresh: { width: 30, height: 30 },
+  fastPrices: { width: '90%', alignItems: 'center', marginVertical: 25 },
   box: {
     flexDirection: 'row',
     backgroundColor: '#1a1b2f',
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: 24,
+    padding: 14,
     justifyContent: 'space-around',
     width: '100%',
     shadowColor: '#9b59b6',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
-    elevation: 15,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
   },
-  iconBox: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  iconImage: {
-    width: 35,
-    height: 35,
-    marginBottom: 10,
-    tintColor: '#8e44ad',
-  },
-  priceText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  priceLabel: {
-    color: '#aaa',
-    fontSize: 12,
-    marginTop: 4,
-  },
+  iconBox: { alignItems: 'center', flex: 1 },
+  iconImage: { width: 34, height: 34, marginBottom: 8, tintColor: '#9b59b6' },
+  priceText: { color: 'white', fontWeight: '600', fontSize: 18 },
+  priceLabel: { color: '#aaa', fontSize: 13, marginTop: 4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 25,
-    width: '80%',
+    width: '90%',
     justifyContent: 'space-between',
   },
   typeButton: {
-    backgroundColor: '#000',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: '#15162b',
+    paddingVertical: 12,
+    borderRadius: 14,
     width: 95,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 1.8,
     borderColor: '#9b59b6',
   },
-  typeButtonText: {
-    color: '#9b59b6',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+  typeButtonText: { color: '#9b59b6', fontWeight: '700', fontSize: 14 },
   currencyBox: {
-    backgroundColor: '#000',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: '#15162b',
+    paddingVertical: 12,
+    borderRadius: 14,
     width: 95,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.8,
     borderColor: '#9b59b6',
   },
-  currencyText: {
-    color: '#9b59b6',
-    fontWeight: '600',
-  },
-  swapBtn: {
-    padding: 10,
-  },
-  swapIcon: {
-    fontSize: 30,
-    color: '#fff',
-  },
+  currencyText: { color: '#9b59b6', fontWeight: '700', fontSize: 14 },
+  swapBtn: { padding: 10 },
+  swapIcon: { fontSize: 40, color: '#fff', margin: -10 },
   inputContainer: {
-    width: '80%',
+    width: '90%',
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.8,
     borderColor: '#9b59b6',
-    borderRadius: 10,
-    backgroundColor: '#000',
-    marginBottom: 20,
-    paddingLeft: 20,
+    borderRadius: 14,
+    backgroundColor: '#15162b',
+    marginBottom: 25,
+    paddingLeft: 16,
   },
   input: {
     flex: 1,
     height: 60,
-    color: '#9b59b6',
+    color: '#fff',
     fontSize: 20,
     textAlign: 'center',
-    includeFontPadding: false,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   currencySymbol: {
     width: 40,
@@ -588,96 +385,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   resultBoxContainer: {
-    width: '80%',
-    borderRadius: 12,
+    width: '90%',
+    borderRadius: 16,
     overflow: 'hidden',
   },
   resultBox: {
-    borderRadius: 12,
+    borderRadius: 16,
     shadowColor: '#9b59b6',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
-    elevation: 15,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 25,
+    elevation: 12,
   },
   resultBoxInner: {
-    paddingVertical: 20,
-    paddingHorizontal: 30,
+    paddingVertical: 22,
+    paddingHorizontal: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  resultText: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  copyNote: {
-    marginTop: 5,
-    fontSize: 12,
-    color: '#fff',
-    opacity: 0.7,
-  },
-  modal: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 0,
-  },
+  resultText: { color: '#fff', fontSize: 24, fontWeight: '700', textAlign: 'center' },
+  copyNote: { marginTop: 6, fontSize: 12, color: '#fff', opacity: 0.65 },
+  modal: { justifyContent: 'center', alignItems: 'center', margin: 0 },
   modalContent: {
     backgroundColor: '#1a1b2f',
-    width: '80%',
-    borderRadius: 15,
-    padding: 25,
+    width: '85%',
+    borderRadius: 20,
+    padding: 28,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.8,
     borderColor: '#FD706D',
   },
-  modalIcon: {
-    width: 60,
-    height: 60,
-    marginBottom: 15,
-    tintColor: '#FD706D',
-  },
-  modalTitle: {
-    color: '#FD706D',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  modalText: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 10,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  retryButton: {
-    backgroundColor: '#9b59b6',
-  },
-  closeButton: {
-    backgroundColor: '#333',
-    borderWidth: 1,
-    borderColor: '#9b59b6',
-  },
-  modalButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  modalIcon: { width: 60, height: 60, marginBottom: 15, tintColor: '#FD706D' },
+  modalTitle: { color: '#FD706D', fontSize: 22, fontWeight: '700', marginBottom: 10, textAlign: 'center' },
+  modalText: { color: '#fff', fontSize: 16, marginBottom: 20, textAlign: 'center', lineHeight: 22 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 10 },
+  modalButton: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginHorizontal: 6 },
+  retryButton: { backgroundColor: '#9b59b6' },
+  closeButton: { backgroundColor: '#2b2d42', borderWidth: 1, borderColor: '#9b59b6' },
+  modalButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
 });
 
 export default VeCurrency;
