@@ -43,7 +43,7 @@ A mobile app developed in **React Native with Expo** to convert amounts between 
 
 ## 📷 Screenshots
 
-| ![b5590d44](https://github.com/user-attachments/assets/eba116fb-8b03-4405-a44d-d845b10326ba) | ![7628c55b](https://github.com/user-attachments/assets/071f5bea-dbba-4b24-be6c-27b9e032eef1) |
+| <img width="540" height="1070" alt="image" src="https://github.com/user-attachments/assets/a673e0eb-1dcc-4dc4-956e-1cfa9c713efe" /> | <img width="540" height="1071" alt="image" src="https://github.com/user-attachments/assets/2004d801-d895-4eab-89b6-7c04e14162f7" /> |
 |:--:|:--:|
 
 ---
