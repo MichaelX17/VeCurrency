@@ -204,7 +204,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 👤 Developed By
 
 **Miguel Farfan**
-- Computer Science Engineer | Frontend & Mobile Developer
+- Computer Science Engineer | Frontend/Backend/Mobile/Desktop Developer
 - 📧 mfpersonal777@gmail.com  
 - 🌐 [GitHub](https://github.com/MichaelX17)
 - 💼 [LinkedIn](https://linkedin.com/in/miguelfarfan) 
