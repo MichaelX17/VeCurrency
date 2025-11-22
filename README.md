@@ -209,5 +209,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - 💼 [Workana](https://www.workana.com/freelancer/9da9f40c57fe3491650d3ddfdc37af91) 
 
 ---
-
-```
