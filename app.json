@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ve-currency",
+    "name": "VeCurrency",
     "slug": "ve-currency",
     "version": "4.0.0",
     "orientation": "portrait",
@@ -21,13 +21,19 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.miguelx17.vecurrency"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-localization"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9eb5f816-e077-4eb3-87c0-1a3e6afe9a34"
+      }
+    }
   }
 }
