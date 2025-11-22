@@ -1,4 +1,3 @@
-```markdown
 # 💱 VeCurrency App
 
 A modern, feature-rich mobile currency converter built with **React Native & Expo** that provides real-time exchange rates between **USD**, **USDT**, and **Venezuelan Bolivars (VES)**. Features a beautiful glassmorphism design with dark/light mode support and multiple rate sources.
@@ -34,6 +33,26 @@ A modern, feature-rich mobile currency converter built with **React Native & Exp
 - **Binance P2P API** for digital dollar rates
 - **Automatic Fallbacks** if one API fails
 - **Network State Detection** with timeout protection
+
+---## 🎨 Theming System
+
+### Dark Theme
+- Deep gradient backgrounds
+- High contrast text
+- Vibrant accent colors
+
+### Light Theme  
+- Light gradient backgrounds
+- Dark text for readability
+- Softer accent colors
+
+---
+
+## 📸 Screenshots
+
+| Dark Mode | Light Mode |
+|:---:|:---:|
+| <img width="540" height="1071" alt="Dark_Mode" src="https://github.com/user-attachments/assets/bdbd0feb-77af-4d1d-956e-8981a222699f" /> | <img width="540" height="1071" alt="Light_Mode" src="https://github.com/user-attachments/assets/17ac5f64-a192-40a5-abbd-864dde4f03ad" /> |
 
 ---
 
@@ -131,27 +150,6 @@ A modern, feature-rich mobile currency converter built with **React Native & Exp
 
 ---
 
-## 🎨 Theming System
-
-### Dark Theme
-- Deep gradient backgrounds
-- High contrast text
-- Vibrant accent colors
-
-### Light Theme  
-- Light gradient backgrounds
-- Dark text for readability
-- Softer accent colors
-
----
-
-## 📸 Screenshots
-
-| Dark Mode | Light Mode |
-|:---:|:---:|
-| <img width="540" height="1070" alt="Dark Mode" src="https://github.com/user-attachments/assets/a673e0eb-1dcc-4dc4-956e-1cfa9c713efe" /> | <img width="540" height="1071" alt="Light Mode" src="https://github.com/user-attachments/assets/2004d801-d895-4eab-89b6-7c04e14162f7" /> |
-
----
 
 ## 🔮 Future Enhancements
 
