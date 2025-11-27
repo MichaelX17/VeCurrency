@@ -177,7 +177,7 @@ export default function MainScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 25, marginBottom: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 25, marginBottom: 20, marginTop: 20 },
   iconBtn: { padding: 8, borderRadius: 12 },
   content: { paddingHorizontal: 20, alignItems: 'center' },
   ratesCard: { width: '100%', marginBottom: 30 },
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   controlsRow: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   pillButton: { paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20, borderWidth: 1.5 },
   inputCard: { width: '100%', height: 80, marginBottom: 25 },
-  input: { fontSize: 28, fontWeight: 'bold', paddingVertical: 10 },
+  input: { fontSize: 22, fontWeight: 'bold', paddingVertical: 10 },
   resultBoxContainer: {
     width: '100%',
     height: 100,
