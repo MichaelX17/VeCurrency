@@ -6,7 +6,7 @@ VeCurrency is a native Android application developed in Kotlin using Jetpack Com
 
 | Dashboard Screen | Calculator Screen |
 |---|---|
-| ![Dashboard Screenshot](app/src/main/res/drawable/dashboard_preview.png) | ![Calculator Screenshot](app/src/main/res/drawable/calculator_preview.png) |
+| <img width="492" height="999" alt="image" src="https://github.com/user-attachments/assets/fe3b688c-2560-470a-8669-242417dbe259" /> | <img width="492" height="999" alt="image" src="https://github.com/user-attachments/assets/c2ff1ca1-0602-4721-aa50-b9fba233604d" /> |
 
 ## App Features
 
