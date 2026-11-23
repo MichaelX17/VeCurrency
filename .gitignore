@@ -1,0 +1,28 @@
+# Built application files
+*.iml
+.gradle
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Local configuration
+local.properties
+/local.properties
+
+# IDE files & caches
+.idea/
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+.kotlin/
+
+# Documentation, Prompts, and internal Agent artifacts
+/docs/
+/Prompts/
+/.artifacts/
